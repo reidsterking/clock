@@ -2,8 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <!-- Makes it open full-screen when added to Home Screen on iOS -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Simple Clock</title>
@@ -32,7 +31,7 @@
       box-sizing:border-box;
     }
     #time{
-      font-size: 14vh;           /* big, scales with screen */
+      font-size: 14vh;
       line-height:0.92;
       font-weight: 600;
       letter-spacing: -0.02em;
@@ -68,16 +67,17 @@
 </head>
 <body>
 
-  <div class="wrap">
-    <div id="time">--:--:--</div>
-    <div id="date">Loading…</div>
-  </div>
+<div class="wrap">
+  <div id="time">--:--:--</div>
+  <div id="date">Loading…</div>
+</div>
 
-  <div class="controls" id="controls">
-    <button class="btn" id="toggle24">24h</button>
-    <button class="btn small" id="toggleSeconds">Hide sec</button>
-    <button class="btn small" id="toggleTheme">Invert</button>
-  </div>
+<div class="controls" id="controls">
+  <button class="btn" id="toggle24">24h</button>
+  <button class="btn small" id="toggleSeconds">Hide sec</button>
+  <button class="btn small" id="toggleTheme">Invert</button>
+  <button class="btn small" id="toggleFullscreen">Fullscreen</button>
+</div>
 
 <script>
 (function(){
@@ -86,13 +86,16 @@
   var btn24 = document.getElementById('toggle24');
   var btnSec = document.getElementById('toggleSeconds');
   var btnTheme = document.getElementById('toggleTheme');
+  var btnFullscreen = document.getElementById('toggleFullscreen');
+  var controls = document.getElementById('controls');
 
   // state
   var use24 = false;
   var showSec = true;
   var inverted = false;
+  var fullscreen = false;
 
-  // restore settings (works in iOS9 localStorage)
+  // restore settings
   try {
     var s = localStorage.getItem('simpleclock-settings');
     if (s) {
@@ -100,12 +103,13 @@
       use24 = !!o.use24;
       showSec = !!o.showSec;
       inverted = !!o.inverted;
+      fullscreen = !!o.fullscreen;
     }
   } catch(e){}
 
   function save() {
     try {
-      localStorage.setItem('simpleclock-settings', JSON.stringify({use24:use24, showSec:showSec, inverted:inverted}));
+      localStorage.setItem('simpleclock-settings', JSON.stringify({use24:use24, showSec:showSec, inverted:inverted, fullscreen:fullscreen}));
     } catch(e){}
   }
 
@@ -131,8 +135,10 @@
     btn24.textContent = use24 ? '24h' : '12h';
     btnSec.textContent = showSec ? 'Hide sec' : 'Show sec';
     btnTheme.textContent = inverted ? 'Normal' : 'Invert';
+    btnFullscreen.textContent = fullscreen ? 'Exit Fullscreen' : 'Fullscreen';
   }
 
+  // button listeners
   btn24.addEventListener('click', function(){ use24 = !use24; save(); updateButtons(); updateTime(); });
   btnSec.addEventListener('click', function(){ showSec = !showSec; save(); updateButtons(); updateTime(); });
   btnTheme.addEventListener('click', function(){
@@ -150,6 +156,28 @@
     updateButtons();
   });
 
+  btnFullscreen.addEventListener('click', function(){
+    fullscreen = !fullscreen;
+    save();
+    if(fullscreen){
+      controls.style.display = 'none';
+      elTime.style.fontSize = '20vh';
+      elDate.style.fontSize = '6vh';
+    } else {
+      controls.style.display = '';
+      elTime.style.fontSize = '14vh';
+      elDate.style.fontSize = '4.6vh';
+    }
+    updateButtons();
+  });
+
+  // detect standalone mode (Home Screen launch)
+  var isStandalone = ('standalone' in window.navigator) && window.navigator.standalone;
+  if(isStandalone){
+    controls.style.display = 'none'; // hide controls by default
+    fullscreen = true;
+  }
+
   // initialize theme from saved state
   if(inverted){
     document.documentElement.style.setProperty('--bg', '#fff');
@@ -158,19 +186,7 @@
 
   updateButtons();
   updateTime();
-  // update every second, but keep CPU load light
   setInterval(updateTime, 1000);
-
-  // Try to keep device awake:
-  // Best approach for stock iOS: instruct user to set Auto-Lock to Never.
-  // For jailbroken devices you can use tweaks. (See instructions below.)
-
-  // Hide controls when installed as web-app to make it full-screen:
-  var isStandalone = ('standalone' in window.navigator) && window.navigator.standalone;
-  if(isStandalone){
-    document.getElementById('controls').classList.remove('hidden');
-    // if you want controls hidden by default comment the line above and use class hidden in markup
-  }
 
 })();
 </script>
