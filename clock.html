@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <!-- Makes it open full-screen when added to Home Screen on iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Simple Clock</title>
+
+  <style>
+    :root {
+      --bg: #000;
+      --fg: #fff;
+      --accent: #0cf;
+    }
+    html,body{height:100%;margin:0}
+    body{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:var(--bg);
+      color:var(--fg);
+      font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+    .wrap{
+      text-align:center;
+      width:100%;
+      padding:2vh 2vw;
+      box-sizing:border-box;
+    }
+    #time{
+      font-size: 14vh;           /* big, scales with screen */
+      line-height:0.92;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    #date{
+      font-size: 4.6vh;
+      opacity:0.85;
+      margin-top: .6vh;
+    }
+    .controls{
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      display:flex;
+      gap:8px;
+      justify-content:center;
+      align-items:center;
+      pointer-events:auto;
+    }
+    .btn{
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.06);
+      color:var(--fg);
+      padding:8px 12px;
+      border-radius:10px;
+      font-size:14px;
+      -webkit-font-smoothing:antialiased;
+    }
+    .small {font-size:12px;padding:6px 8px}
+    .hidden { display:none !important; }
+  </style>
+</head>
+<body>
+
+  <div class="wrap">
+    <div id="time">--:--:--</div>
+    <div id="date">Loading…</div>
+  </div>
+
+  <div class="controls" id="controls">
+    <button class="btn" id="toggle24">24h</button>
+    <button class="btn small" id="toggleSeconds">Hide sec</button>
+    <button class="btn small" id="toggleTheme">Invert</button>
+  </div>
+
+<script>
+(function(){
+  var elTime = document.getElementById('time');
+  var elDate = document.getElementById('date');
+  var btn24 = document.getElementById('toggle24');
+  var btnSec = document.getElementById('toggleSeconds');
+  var btnTheme = document.getElementById('toggleTheme');
+
+  // state
+  var use24 = false;
+  var showSec = true;
+  var inverted = false;
+
+  // restore settings (works in iOS9 localStorage)
+  try {
+    var s = localStorage.getItem('simpleclock-settings');
+    if (s) {
+      var o = JSON.parse(s);
+      use24 = !!o.use24;
+      showSec = !!o.showSec;
+      inverted = !!o.inverted;
+    }
+  } catch(e){}
+
+  function save() {
+    try {
+      localStorage.setItem('simpleclock-settings', JSON.stringify({use24:use24, showSec:showSec, inverted:inverted}));
+    } catch(e){}
+  }
+
+  function pad(n){ return n < 10 ? '0' + n : n; }
+
+  function updateTime(){
+    var now = new Date();
+    var h = now.getHours();
+    var m = pad(now.getMinutes());
+    var s = pad(now.getSeconds());
+    var displayHour = h;
+    if(!use24){
+      displayHour = h % 12;
+      if(displayHour === 0) displayHour = 12;
+    }
+    var t = (use24 ? pad(displayHour) : displayHour) + ':' + m + (showSec ? (':' + s) : '');
+    elTime.textContent = t;
+    var options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+    elDate.textContent = now.toLocaleDateString ? now.toLocaleDateString(undefined, options) : now.toDateString();
+  }
+
+  function updateButtons(){
+    btn24.textContent = use24 ? '24h' : '12h';
+    btnSec.textContent = showSec ? 'Hide sec' : 'Show sec';
+    btnTheme.textContent = inverted ? 'Normal' : 'Invert';
+  }
+
+  btn24.addEventListener('click', function(){ use24 = !use24; save(); updateButtons(); updateTime(); });
+  btnSec.addEventListener('click', function(){ showSec = !showSec; save(); updateButtons(); updateTime(); });
+  btnTheme.addEventListener('click', function(){
+    inverted = !inverted;
+    save();
+    if(inverted){
+      document.documentElement.style.setProperty('--bg', '#fff');
+      document.documentElement.style.setProperty('--fg', '#000');
+      document.documentElement.style.setProperty('--accent', '#006');
+    } else {
+      document.documentElement.style.setProperty('--bg', '#000');
+      document.documentElement.style.setProperty('--fg', '#fff');
+      document.documentElement.style.setProperty('--accent', '#0cf');
+    }
+    updateButtons();
+  });
+
+  // initialize theme from saved state
+  if(inverted){
+    document.documentElement.style.setProperty('--bg', '#fff');
+    document.documentElement.style.setProperty('--fg', '#000');
+  }
+
+  updateButtons();
+  updateTime();
+  // update every second, but keep CPU load light
+  setInterval(updateTime, 1000);
+
+  // Try to keep device awake:
+  // Best approach for stock iOS: instruct user to set Auto-Lock to Never.
+  // For jailbroken devices you can use tweaks. (See instructions below.)
+
+  // Hide controls when installed as web-app to make it full-screen:
+  var isStandalone = ('standalone' in window.navigator) && window.navigator.standalone;
+  if(isStandalone){
+    document.getElementById('controls').classList.remove('hidden');
+    // if you want controls hidden by default comment the line above and use class hidden in markup
+  }
+
+})();
+</script>
+
+</body>
+</html>
